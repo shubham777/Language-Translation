@@ -11,8 +11,9 @@ from datetime import datetime
 #from utils import *
 #from rnn_theano import RNNTheano
 #from VanillaRNN import *
+import string
 
-vocabulary_size = 8000
+vocabulary_size = 2000
 unknown_token = "UNKNOWN_TOKEN"
 sentence_start_token = "SENTENCE_START"
 sentence_end_token = "SENTENCE_END"
@@ -48,6 +49,12 @@ def getData(file):
     index2word = [x[0] for x in vocab]
     index2word.append(unknown_token)
     word2index = dict([(w, i) for i, w in enumerate(index2word)])
+
+    """  This will contain a list [] of tuples such that each element will contain
+         each tuple of the form (word, num_sentences_with_that_word)
+         for e.g. ('the', 3155)
+    """
+    num_sentences_with_each_word = num_sentences_with_unique_words(vocab, sentences)
 
     print "Using vocabulary size %d." % vocabulary_size
     print "The least frequent word in our vocabulary is '%s' and appeared %d times." % (vocab[-1][0], vocab[-1][1])
@@ -88,5 +95,35 @@ def get_training_set():
     print ('Done tokenization!')
     return [train_X, train_Y]
 
+def num_sentences_with_unique_words(vocab, sentences):
+    num_sentences = []
+
+    for i in range(len(vocab)):
+        word = vocab[i][0]
+        sent_count = 0
+        for sentence in sentences:
+            if find_substring(word, sentence):
+                sent_count += 1
+
+        num_sentences.append((word,sent_count))
+
+    return num_sentences
 
 
+
+def find_substring(word, sentence):
+
+    index = sentence.find(word)
+    if index != -1 and ord(word[0]) == 46:
+        return True
+
+    if index == -1:
+        return False
+    if index != 0 and sentence[index-1] not in string.whitespace:
+        return False
+    L = index + len(word)
+    if L < len(sentence) and sentence[L] not in string.whitespace:
+        return False
+    return True
+
+get_training_set()
