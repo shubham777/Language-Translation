@@ -1,5 +1,5 @@
 import numpy as np
-from test import *
+from ParseData import *
 from datetime import datetime
 import sys
 import os
@@ -8,19 +8,19 @@ import time
 
 class VanillaRnn(object):
     
-    def __init__(self, source_dim, target_dim, hidden_dim, bptt_truncate=5):
+    def __init__(self, source_dimension, target_dimension, hidden_dimension, bptt_truncate=5):
         # Assign instance variables
-        self.source_dim = source_dim
-        self.target_dim = target_dim
-        self.hidden_dim = hidden_dim
+        self.source_dimension = source_dimension
+        self.target_dimension = target_dimension
+        self.hidden_dimension = hidden_dimension
         self.bptt_truncate = bptt_truncate
-        # Randomly initialize the network parameters
-        self.We = np.random.uniform(-np.sqrt(1./source_dim), np.sqrt(1./source_dim), (hidden_dim, source_dim))
-        self.Ue = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (hidden_dim, hidden_dim))
-        self.Wd = np.random.uniform(-np.sqrt(1./target_dim), np.sqrt(1./target_dim), (hidden_dim, target_dim))
-        self.Ud = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (hidden_dim, hidden_dim))
-        self.V = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (hidden_dim, hidden_dim))
-        self.P = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (target_dim,hidden_dim))
+
+        self.We = np.random.uniform(-np.sqrt(1./source_dimension), np.sqrt(1./source_dimension), (hidden_dimension, source_dimension))
+        self.Ue = np.random.uniform(-np.sqrt(1./hidden_dimension), np.sqrt(1./hidden_dimension), (hidden_dimension, hidden_dimension))
+        self.Wd = np.random.uniform(-np.sqrt(1./target_dimension), np.sqrt(1./target_dimension), (hidden_dimension, target_dimension))
+        self.Ud = np.random.uniform(-np.sqrt(1./hidden_dimension), np.sqrt(1./hidden_dimension), (hidden_dimension, hidden_dimension))
+        self.V = np.random.uniform(-np.sqrt(1./hidden_dimension), np.sqrt(1./hidden_dimension), (hidden_dimension, hidden_dimension))
+        self.P = np.random.uniform(-np.sqrt(1./hidden_dimension), np.sqrt(1./hidden_dimension), (target_dimension,hidden_dimension))
 
     def calculate_loss(self, x, y):
         Tdec = len(y)
@@ -43,11 +43,9 @@ class VanillaRnn(object):
     def encoder(self, x):
         # The total number of time steps
         Tenc = len(x)
-        # During forward propagation we save all hidden states in h because need them for back propagation.
-        h = np.zeros((Tenc+1, self.hidden_dim))
-        # For each time step...
+        h = np.zeros((Tenc+1, self.hidden_dimension))
+
         for t in np.arange(Tenc):
-            # Note that we are indexing W by x[t]. This is the same as multiplying U with a one-hot vector.
             h[t] = activation(self.We[:, x[t]] + np.dot(self.Ue, h[t-1]))
         return h
 
@@ -56,10 +54,9 @@ class VanillaRnn(object):
         if (y != None):
             # The total number of time steps
             Tdec = len(y)
-            # During forward propagation we save all hidden states in h because need them for back propagation.
-            s = np.zeros((Tdec, self.hidden_dim))
+            s = np.zeros((Tdec, self.hidden_dimension))
             s[0] = activation(np.dot(self.V, c))
-            o = np.zeros((Tdec, self.target_dim))
+            o = np.zeros((Tdec, self.target_dimension))
             o[0] = softmax(np.dot(self.P, s[0]))
             # For each time step...
             for t in np.arange(1,Tdec):
@@ -115,16 +112,13 @@ class VanillaRnn(object):
         delta_c_t = activation_prime(c)
         delta_o = o
         delta_o[np.arange(len(y)), y] -= 1.
-        #tf_itf = tf[y] * itf[y]
-        #delta_o[np.arange(len(y)), y] *=(1+tf_itf)
+
         delta_o=np.asarray([weight*delta_o[t] for t in np.arange(len(y))])
         # For each output backwards...
         for t in np.arange(Tdec)[::-1]:
-            #print delta_o[t].shape, s[t].shape
             dLdP += np.outer(delta_o[t], s[t])
-            # Initial delta calculation: dL/dz
             delta_s_t = np.dot(self.P.T, delta_o[t]) * activation_prime(s[t])
-            dLdc = np.zeros(self.hidden_dim)
+            dLdc = np.zeros(self.hidden_dimension)
             # Backpropagation through time (for at most self.bptt_truncate steps)
             for decoder_step in np.arange(max(1, t - self.bptt_truncate), t + 1)[::-1]:
                 # print "Backpropagation step t=%d bptt step=%d " % (t, bptt_step)

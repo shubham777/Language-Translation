@@ -15,21 +15,21 @@ import string
 import pickle
 
 
+LOAD_DATASET = False
+
 vocabulary_size = 2000
 unknown_token = "UNKNOWN_TOKEN"
 sentence_start_token = "SENTENCE_START"
 sentence_end_token = "SENTENCE_END"
 
-LOAD_DATASET = False
-
 def getData(file):
     # Read the data and append SENTENCE_START and SENTENCE_END tokens
-    print "Reading CSV file..."
+    print "Reading CSV file..." + file
     sentences = []
     with open(file, 'rb') as f:
         reader = csv.reader(f, skipinitialspace=True)
         reader.next()
-        # Split full comments into sentences
+
         for x in reader:
             if len(x) > 0:
                 c = x[0].decode('utf-8').lower()
@@ -39,35 +39,30 @@ def getData(file):
 
         sentences = ["%s %s" % (x, sentence_end_token) for x in sentences]
 
-    print "Parsed %d sentences." % (len(sentences))
 
     # Tokenize the sentences into words
     tokenized_sentences = [nltk.word_tokenize(sent) for sent in sentences]
 
-    word_freq = nltk.FreqDist(itertools.chain(*tokenized_sentences))
-    print "Found %d unique words tokens." % len(word_freq.items())
+    word_frequency = nltk.FreqDist(itertools.chain(*tokenized_sentences))
 
-    # Get the most common words and build index_to_word and word_to_index vectors
-    vocab = word_freq.most_common(vocabulary_size - 1)
-    index2word = [x[0] for x in vocab]
-    index2word.append(unknown_token)
-    word2index = dict([(w, i) for i, w in enumerate(index2word)])
+    vocabulary = word_frequency.most_common(vocabulary_size - 1)
+    index_to_word = [x[0] for x in vocabulary]
+    index_to_word.append(unknown_token)
+    word_to_index = dict([(word, index)
+                          for index, word in enumerate(index_to_word)])
 
-    num_sentences_with_each_word = num_sentences_with_unique_words(vocab, sentences)
-
-    print "Using vocabulary size %d." % vocabulary_size
-    print "The least frequent word in our vocabulary is '%s' and appeared %d times." % (vocab[-1][0], vocab[-1][1])
+    num_sentences_with_each_word = num_sentences_with_unique_words(vocabulary, sentences)
 
     for i, sent in enumerate(tokenized_sentences):
-        tokenized_sentences[i] = [w if w in word2index else unknown_token for w in sent]
+        tokenized_sentences[i] = [word if word in word_to_index
+                                  else unknown_token for word in sent]
 
-    print "\nExample sentence: '%s'" % sentences[0]
-    print "\nExample sentence after Pre-processing: '%s'" % tokenized_sentences[0]
 
     # Create the training data
-    training_data = np.asarray([[word2index[w] for w in sent] for sent in tokenized_sentences])
+    training_data = np.asarray([[word_to_index[word]
+                                 for word in sent] for sent in tokenized_sentences])
 
-    return [training_data, word2index, index2word, vocab, num_sentences_with_each_word]
+    return [training_data, word_to_index, index_to_word, vocabulary, num_sentences_with_each_word]
 
 
 def load_dataset(train_file_en, train_file_de):
